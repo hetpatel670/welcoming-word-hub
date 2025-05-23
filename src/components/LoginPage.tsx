@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,7 +32,6 @@ const LoginPage = () => {
       toast({
         title: isRegistering ? "Registration failed" : "Login failed",
         description: error.message || "Please check your credentials and try again",
-        variant: "destructive",
       });
     }
   };
@@ -50,7 +48,6 @@ const LoginPage = () => {
       toast({
         title: "Google login failed",
         description: error.message || "An error occurred during Google login",
-        variant: "destructive",
       });
     }
   };

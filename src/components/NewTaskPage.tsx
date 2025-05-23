@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/context/AppContext';
 import { ChevronLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { suggestTask } from '@/utils/openRouterApi';
+import taskSuggestions from '@/data/taskSuggestions.json';
 
 interface NewTaskPageProps {
   onBack: () => void;
@@ -27,7 +26,6 @@ const NewTaskPage = ({ onBack }: NewTaskPageProps) => {
       toast({
         title: "Task name required",
         description: "Please enter a task name",
-        variant: "destructive",
       });
       return;
     }
@@ -35,7 +33,7 @@ const NewTaskPage = ({ onBack }: NewTaskPageProps) => {
     try {
       await addTask({
         name,
-        frequency,
+        frequency: frequency as 'daily' | 'weekly' | 'mon-wed-fri' | 'every-3-hours',
         reminderTime,
         isCompleted: false
       });
@@ -51,7 +49,6 @@ const NewTaskPage = ({ onBack }: NewTaskPageProps) => {
       toast({
         title: "Failed to add task",
         description: error.message || "An error occurred while adding the task",
-        variant: "destructive",
       });
     }
   };
@@ -60,8 +57,9 @@ const NewTaskPage = ({ onBack }: NewTaskPageProps) => {
     setIsLoading(true);
     
     try {
-      // Call the OpenRouter API for task suggestions
-      const suggestion = await suggestTask();
+      // Use local JSON file for task suggestions
+      const randomIndex = Math.floor(Math.random() * taskSuggestions.length);
+      const suggestion = taskSuggestions[randomIndex];
       setName(suggestion);
       
       toast({
@@ -73,7 +71,6 @@ const NewTaskPage = ({ onBack }: NewTaskPageProps) => {
       toast({
         title: "Suggestion failed",
         description: "Failed to get task suggestion. Please try again.",
-        variant: "destructive",
       });
       
       // Fallback to some predefined suggestions

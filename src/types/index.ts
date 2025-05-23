@@ -2,15 +2,18 @@
 export interface Task {
   id: string;
   name: string;
-  frequency: 'daily' | 'mon-wed-fri' | 'every-3-hours' | string;
+  frequency: 'daily' | 'weekly' | 'mon-wed-fri' | 'every-3-hours';
   reminderTime?: string;
   isCompleted: boolean;
+  createdAt?: Date;
 }
 
 export interface User {
   id: string;
   email: string;
   username?: string;
+  displayName?: string;
+  photoURL?: string;
   points: number;
   currentStreak: number;
   isPublicProfile?: boolean;

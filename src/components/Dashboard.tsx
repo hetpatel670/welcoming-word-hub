@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useAppContext } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
@@ -33,7 +32,6 @@ const Dashboard = () => {
       toast({
         title: "Logout failed",
         description: error.message || "An error occurred during logout",
-        variant: "destructive",
       });
     }
   };

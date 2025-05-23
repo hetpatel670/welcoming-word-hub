@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/context/AppContext';
 import { motion } from 'framer-motion';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface UsernamePromptProps {
   onComplete: () => void;
@@ -14,6 +13,7 @@ const UsernamePrompt: React.FC<UsernamePromptProps> = ({ onComplete }) => {
   const { user, updateUsername } = useAppContext();
   const [username, setUsername] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +22,6 @@ const UsernamePrompt: React.FC<UsernamePromptProps> = ({ onComplete }) => {
       toast({
         title: "Username required",
         description: "Please enter a username to continue",
-        variant: "destructive"
       });
       return;
     }
@@ -40,7 +39,6 @@ const UsernamePrompt: React.FC<UsernamePromptProps> = ({ onComplete }) => {
       toast({
         title: "Error",
         description: "Failed to update username. Please try again.",
-        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
