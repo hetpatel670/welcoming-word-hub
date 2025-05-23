@@ -1,57 +1,64 @@
 
-import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react';
-import TaskItem from './TaskItem';
+import React, { useMemo, useCallback, useState } from 'react';
+import TaskReorderableList from './TaskReorderableList';
+import TaskFilters from './TaskFilters';
+import TaskAnalytics from './TaskAnalytics';
+import ReportsPage from './ReportsPage';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
-import { Plus } from 'lucide-react';
-import { FixedSizeList as List } from 'react-window';
+import { Plus, BarChart3, FileText, TrendingUp } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const TaskList = () => {
-  const { tasks, user, currentStreak, setActiveTab } = useAppContext();
-  const [listHeight, setListHeight] = useState(400);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { tasks, user, currentStreak, completedTasksPercentage, setActiveTab } = useAppContext();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterBy, setFilterBy] = useState('all');
+  const [sortBy, setSortBy] = useState('status');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Memoize the sorted tasks to prevent unnecessary re-renders
-  const sortedTasks = useMemo(() => {
-    // Sort tasks with incomplete tasks first, then by name
-    return [...tasks].sort((a, b) => {
-      // First sort by completion status
-      if (a.isCompleted !== b.isCompleted) {
-        return a.isCompleted ? 1 : -1;
+  // Filter and sort tasks
+  const filteredAndSortedTasks = useMemo(() => {
+    let filtered = tasks.filter(task => {
+      const matchesSearch = task.name.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      switch (filterBy) {
+        case 'completed':
+          return matchesSearch && task.isCompleted;
+        case 'pending':
+          return matchesSearch && !task.isCompleted;
+        case 'daily':
+          return matchesSearch && task.frequency === 'daily';
+        case 'weekly':
+          return matchesSearch && task.frequency === 'weekly';
+        default:
+          return matchesSearch;
       }
-      // Then sort by name
-      return a.name.localeCompare(b.name);
     });
-  }, [tasks]);
 
-  // Use useCallback to prevent unnecessary function recreations
+    return filtered.sort((a, b) => {
+      let comparison = 0;
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case 'frequency':
+          comparison = a.frequency.localeCompare(b.frequency);
+          break;
+        case 'status':
+          comparison = a.isCompleted === b.isCompleted ? 0 : a.isCompleted ? 1 : -1;
+          break;
+        default:
+          comparison = 0;
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  }, [tasks, searchTerm, filterBy, sortBy, sortOrder]);
+
   const handleAddTaskClick = useCallback(() => {
     setActiveTab('add');
   }, [setActiveTab]);
-  
-  // Calculate the available height for the list
-  useEffect(() => {
-    const updateHeight = () => {
-      if (containerRef.current) {
-        const containerHeight = containerRef.current.clientHeight;
-        setListHeight(containerHeight - 20); // Subtract padding
-      }
-    };
-    
-    updateHeight();
-    window.addEventListener('resize', updateHeight);
-    return () => window.removeEventListener('resize', updateHeight);
-  }, []);
-  
-  // Render each task item in the virtualized list
-  const renderTask = useCallback(({ index, style }: { index: number; style: React.CSSProperties }) => {
-    const task = sortedTasks[index];
-    return (
-      <div style={style}>
-        <TaskItem key={task.id} task={task} />
-      </div>
-    );
-  }, [sortedTasks]);
 
   return (
     <div className="p-4 sm:p-6 flex flex-col h-full">
@@ -74,28 +81,67 @@ const TaskList = () => {
         <Plus className="mr-2" size={18} /> Add Task
       </Button>
 
-      <div 
-        ref={containerRef} 
-        className="flex-1 overflow-hidden pb-20"
-        aria-label="Your tasks"
-      >
-        {sortedTasks.length > 0 ? (
-          <List
-            height={listHeight}
-            width="100%"
-            itemCount={sortedTasks.length}
-            itemSize={80} // Adjust based on your TaskItem height
-            overscanCount={3} // Pre-render items for smoother scrolling
-          >
-            {renderTask}
-          </List>
-        ) : (
-          <div className="text-center text-gray-400 mt-10 p-4">
-            <p className="text-sm sm:text-base">No tasks yet. Add a new task to get started!</p>
-            <p className="mt-2 text-xs sm:text-sm text-gray-500">Complete tasks daily to build your streak and earn points.</p>
+      <Tabs defaultValue="tasks" className="flex-1">
+        <TabsList className="grid w-full grid-cols-3 bg-app-lightblue">
+          <TabsTrigger value="tasks" className="text-white data-[state=active]:bg-app-teal data-[state=active]:text-black">
+            Tasks
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="text-white data-[state=active]:bg-app-teal data-[state=active]:text-black">
+            <BarChart3 size={16} className="mr-1" />
+            Analytics
+          </TabsTrigger>
+          <TabsTrigger value="reports" className="text-white data-[state=active]:bg-app-teal data-[state=active]:text-black">
+            <FileText size={16} className="mr-1" />
+            Reports
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="tasks" className="flex-1 mt-4">
+          <TaskFilters
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
+            filterBy={filterBy}
+            onFilterChange={setFilterBy}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            sortOrder={sortOrder}
+            onSortOrderChange={setSortOrder}
+          />
+
+          <div className="flex-1 overflow-hidden pb-20">
+            {filteredAndSortedTasks.length > 0 ? (
+              <TaskReorderableList tasks={filteredAndSortedTasks} />
+            ) : (
+              <div className="text-center text-gray-400 mt-10 p-4">
+                <p className="text-sm sm:text-base">
+                  {searchTerm || filterBy !== 'all' 
+                    ? 'No tasks match your filters.' 
+                    : 'No tasks yet. Add a new task to get started!'
+                  }
+                </p>
+                <p className="mt-2 text-xs sm:text-sm text-gray-500">
+                  {searchTerm || filterBy !== 'all'
+                    ? 'Try adjusting your search or filter criteria.'
+                    : 'Complete tasks daily to build your streak and earn points.'
+                  }
+                </p>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="mt-4">
+          <TaskAnalytics 
+            tasks={tasks}
+            completedTasksPercentage={completedTasksPercentage}
+            currentStreak={currentStreak}
+          />
+        </TabsContent>
+
+        <TabsContent value="reports" className="mt-4">
+          <ReportsPage />
+        </TabsContent>
+      </Tabs>
 
       {user && (
         <div className="mt-auto pt-4 pb-2 text-center bg-app-darkblue bg-opacity-80 backdrop-blur-sm rounded-lg">

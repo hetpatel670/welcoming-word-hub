@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Task, User, Badge, UserProfile } from '../types';
 import { 
@@ -42,6 +43,7 @@ interface AppContextType {
   completeTask: (id: string) => void;
   uncompleteTask: (id: string) => void;
   deleteTask: (id: string) => void;
+  reorderTasks: (sourceIndex: number, destinationIndex: number) => void;
   updateUsername: (username: string) => Promise<void>;
   updateProfileVisibility: (isPublic: boolean) => Promise<void>;
   fetchPublicProfiles: () => Promise<UserProfile[]>;
