@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, Plus, BarChart2, UserCircle } from 'lucide-react';
+import { Home, Plus, BarChart2, UserCircle, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface NavigationProps {
@@ -12,13 +12,14 @@ const Navigation = ({ activeTab, setActiveTab }: NavigationProps) => {
   const navItems = [
     { id: 'home', icon: Home, label: 'Home' },
     { id: 'add', icon: Plus, label: 'Add' },
+    { id: 'explore', icon: Users, label: 'Explore' },
     { id: 'dashboard', icon: BarChart2, label: 'Stats' },
     { id: 'profile', icon: UserCircle, label: 'Profile' }
   ];
 
   return (
     <motion.div 
-      className="fixed bottom-0 left-0 right-0 h-16 bg-app-darkblue border-t border-gray-800 flex justify-around items-center px-4 sm:px-6 z-10"
+      className="fixed bottom-0 left-0 right-0 h-16 bg-app-darkblue border-t border-gray-800 flex justify-around items-center px-1 sm:px-6 z-10 overflow-x-auto"
       initial={{ y: 100 }}
       animate={{ y: 0 }}
       transition={{ type: "spring", stiffness: 260, damping: 20 }}
@@ -41,7 +42,7 @@ const Navigation = ({ activeTab, setActiveTab }: NavigationProps) => {
             }}
             transition={{ type: "spring", stiffness: 300, damping: 15 }}
           >
-            <item.icon size={22} />
+            <item.icon size={20} />
           </motion.div>
           <motion.span 
             className={`text-xs mt-1 ${activeTab === item.id ? 'opacity-100' : 'opacity-70'}`}

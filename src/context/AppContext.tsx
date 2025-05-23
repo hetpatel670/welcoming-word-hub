@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { Task, User, Badge } from '../types';
+import { Task, User, Badge, UserProfile } from '../types';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
@@ -34,12 +34,17 @@ interface AppContextType {
   completedTasksPercentage: number;
   activeTab: string;
   showOnboarding: boolean;
+  showUsernamePrompt: boolean;
   setActiveTab: (tab: string) => void;
   setOnboardingComplete: (complete: boolean) => void;
+  setUsernamePromptComplete: (complete: boolean) => void;
   addTask: (task: Omit<Task, 'id'>) => void;
   completeTask: (id: string) => void;
   uncompleteTask: (id: string) => void;
   deleteTask: (id: string) => void;
+  updateUsername: (username: string) => Promise<void>;
+  updateProfileVisibility: (isPublic: boolean) => Promise<void>;
+  fetchPublicProfiles: () => Promise<UserProfile[]>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
@@ -68,6 +73,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const [completedTasksPercentage, setCompletedTasksPercentage] = useState(0);
   const [activeTab, setActiveTab] = useState('home');
   const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showUsernamePrompt, setShowUsernamePrompt] = useState(false);
   
   const [badges, setBadges] = useState<Badge[]>([
     { id: '1', name: 'Hydration Hero', icon: '💧', description: 'Complete water drinking tasks 7 days in a row', earned: false },
@@ -111,7 +117,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                 displayName: firebaseUser.displayName || '',
                 photoURL: firebaseUser.photoURL || '',
                 points: userData?.points || 0,
-                currentStreak: userData?.currentStreak || 0
+                currentStreak: userData?.currentStreak || 0,
+                username: userData?.username || '',
+                isPublicProfile: userData?.isPublicProfile || false
               };
               
               setUser(userObj);
@@ -134,7 +142,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
                 displayName: firebaseUser.displayName || '',
                 photoURL: firebaseUser.photoURL || '',
                 points: 0,
-                currentStreak: 0
+                currentStreak: 0,
+                username: '',
+                isPublicProfile: false
               };
               setUser(userObj);
               setIsLoggedIn(true);
@@ -174,8 +184,10 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         return {
           id: uid,
           email: userDoc.data().email,
+          username: userDoc.data().username || '',
           points: userDoc.data().points || 0,
-          currentStreak: userDoc.data().currentStreak || 0
+          currentStreak: userDoc.data().currentStreak || 0,
+          isPublicProfile: userDoc.data().isPublicProfile || false
         };
       } else {
         // Create user document if it doesn't exist
@@ -183,7 +195,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
           id: uid,
           email: auth.currentUser?.email || '',
           points: 0,
-          currentStreak: 0
+          currentStreak: 0,
+          isPublicProfile: false
         };
         await setDoc(userDocRef, newUser);
         return newUser;
@@ -195,7 +208,8 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         id: uid,
         email: auth.currentUser?.email || '',
         points: 0,
-        currentStreak: 0
+        currentStreak: 0,
+        isPublicProfile: false
       };
     }
   };
@@ -478,7 +492,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       await setDoc(userDocRef, {
         email,
         points: 0,
-        currentStreak: 0
+        currentStreak: 0,
+        username: '',
+        isPublicProfile: false
       });
       
       // Create streak document
@@ -516,7 +532,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         await setDoc(userDocRef, {
           email,
           points: 0,
-          currentStreak: 0
+          currentStreak: 0,
+          username: '',
+          isPublicProfile: false
         });
         
         // Create streak document
@@ -568,6 +586,104 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     }
   }, []);
 
+  // Add function to update username
+  const updateUsername = async (username: string): Promise<void> => {
+    const auth = getFirebaseAuth();
+    if (!auth.currentUser) throw new Error('User not authenticated');
+    
+    try {
+      const db = getFirebaseFirestore();
+      const uid = auth.currentUser.uid;
+      const userDocRef = doc(db, 'users', uid);
+      
+      await updateDoc(userDocRef, { username });
+      
+      // Update local state
+      setUser(prev => prev ? { ...prev, username } : null);
+      setShowUsernamePrompt(false);
+    } catch (error) {
+      console.error('Error updating username:', error);
+      throw error;
+    }
+  };
+
+  // Add function to update profile visibility
+  const updateProfileVisibility = async (isPublic: boolean): Promise<void> => {
+    const auth = getFirebaseAuth();
+    if (!auth.currentUser) throw new Error('User not authenticated');
+    
+    try {
+      const db = getFirebaseFirestore();
+      const uid = auth.currentUser.uid;
+      const userDocRef = doc(db, 'users', uid);
+      
+      await updateDoc(userDocRef, { isPublicProfile: isPublic });
+      
+      // Update local state
+      setUser(prev => prev ? { ...prev, isPublicProfile: isPublic } : null);
+    } catch (error) {
+      console.error('Error updating profile visibility:', error);
+      throw error;
+    }
+  };
+
+  // Add function to fetch public profiles
+  const fetchPublicProfiles = async (): Promise<UserProfile[]> => {
+    try {
+      const db = getFirebaseFirestore();
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('isPublicProfile', '==', true)
+      );
+      
+      const usersSnapshot = await getDocs(usersQuery);
+      const profiles: UserProfile[] = [];
+      
+      for (const userDoc of usersSnapshot.docs) {
+        // Skip current user
+        if (userDoc.id === user?.id) continue;
+        
+        const userData = userDoc.data();
+        
+        // Skip users without username
+        if (!userData.username) continue;
+        
+        // Get user badges
+        const badgesSnapshot = await getDocs(collection(db, 'users', userDoc.id, 'badges'));
+        const userBadges: Badge[] = badgesSnapshot.docs.map(doc => ({ 
+          id: doc.id,
+          ...doc.data()
+        } as Badge));
+        
+        profiles.push({
+          id: userDoc.id,
+          username: userData.username,
+          points: userData.points || 0,
+          currentStreak: userData.currentStreak || 0,
+          badges: userBadges,
+          isPublicProfile: true
+        });
+      }
+      
+      return profiles;
+    } catch (error) {
+      console.error('Error fetching public profiles:', error);
+      return [];
+    }
+  };
+
+  // Add function to set username prompt complete
+  const setUsernamePromptComplete = (complete: boolean) => {
+    setShowUsernamePrompt(!complete);
+  };
+
+  // Add effect to check if username is set
+  useEffect(() => {
+    if (user && isLoggedIn && !user.username) {
+      setShowUsernamePrompt(true);
+    }
+  }, [user, isLoggedIn]);
+
   return (
     <AppContext.Provider value={{
       tasks,
@@ -578,12 +694,17 @@ export const AppProvider = ({ children }: AppProviderProps) => {
       completedTasksPercentage,
       activeTab,
       showOnboarding,
+      showUsernamePrompt,
       setActiveTab,
       setOnboardingComplete,
+      setUsernamePromptComplete,
       addTask,
       completeTask,
       uncompleteTask,
       deleteTask,
+      updateUsername,
+      updateProfileVisibility,
+      fetchPublicProfiles,
       login,
       register,
       logout,

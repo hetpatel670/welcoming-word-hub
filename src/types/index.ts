@@ -10,8 +10,10 @@ export interface Task {
 export interface User {
   id: string;
   email: string;
+  username?: string;
   points: number;
   currentStreak: number;
+  isPublicProfile?: boolean;
 }
 
 export interface Badge {
@@ -20,4 +22,13 @@ export interface Badge {
   icon: string;
   description: string;
   earned: boolean;
+}
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  points: number;
+  currentStreak: number;
+  badges: Badge[];
+  isPublicProfile: boolean;
 }

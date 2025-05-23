@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { AppProvider } from '@/context/AppContext';
 import Navigation from '@/components/Navigation';
@@ -11,10 +12,12 @@ import NewTaskPage from '@/components/NewTaskPage';
 import Dashboard from '@/components/Dashboard';
 import Onboarding from '@/components/Onboarding';
 import ProfilePage from '@/pages/ProfilePage';
+import ExplorePage from '@/pages/ExplorePage';
+import UsernamePrompt from '@/components/UsernamePrompt';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 const AppContent = () => {
-  const { isLoggedIn, activeTab, setActiveTab, showOnboarding } = useAppContext();
+  const { isLoggedIn, activeTab, setActiveTab, showOnboarding, showUsernamePrompt, setUsernamePromptComplete } = useAppContext();
   const [isLoading, setIsLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
 
@@ -63,6 +66,11 @@ const AppContent = () => {
     return <LoginPage />;
   }
   
+  // Show username prompt if needed
+  if (showUsernamePrompt) {
+    return <UsernamePrompt onComplete={() => setUsernamePromptComplete(true)} />;
+  }
+  
   // Show onboarding for new users
   if (showOnboarding) {
     console.log("Showing onboarding");
@@ -75,6 +83,7 @@ const AppContent = () => {
       <div className="pb-16">
         {activeTab === 'home' && <TaskList />}
         {activeTab === 'add' && <NewTaskPage onBack={() => setActiveTab('home')} />}
+        {activeTab === 'explore' && <ExplorePage />}
         {activeTab === 'dashboard' && <Dashboard />}
         {activeTab === 'profile' && <ProfilePage />}
       </div>
