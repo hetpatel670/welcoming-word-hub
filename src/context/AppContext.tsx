@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Task, User, Badge, UserProfile } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -7,6 +6,7 @@ import { useStreak } from '../hooks/useStreak';
 import { useProfiles } from '../hooks/useProfiles';
 import { useBadges } from '../hooks/useBadges';
 import { useToast } from '@/hooks/use-toast';
+import NotificationService from '../services/notificationService';
 
 interface AppContextType {
   tasks: Task[];
@@ -57,10 +57,29 @@ export const AppProvider = ({ children }: AppProviderProps) => {
 
   // Custom hooks
   const { user, isLoggedIn, login, register, loginWithGoogle, logout, updateUsername, updateProfileVisibility } = useAuth();
-  const { tasks, completedTasksPercentage, addTask, completeTask: baseCompleteTask, uncompleteTask, deleteTask, reorderTasks } = useTasks(user, isLoggedIn);
+  const { tasks, completedTasksPercentage, addTask: baseAddTask, completeTask: baseCompleteTask, uncompleteTask, deleteTask, reorderTasks } = useTasks(user, isLoggedIn);
   const { currentStreak, checkAndUpdateStreak, setCurrentStreak } = useStreak(user, isLoggedIn);
   const { badges, updateBadges, evaluateAndAwardSpecialBadge } = useBadges();
   const { fetchPublicProfiles } = useProfiles(user?.id);
+
+  // Initialize notification service
+  const notificationService = NotificationService.getInstance();
+
+  // Enhanced add task function that schedules notifications
+  const addTask = async (task: Omit<Task, 'id'>) => {
+    await baseAddTask(task);
+    
+    // Schedule notification if reminder time is set
+    if (task.reminderTime) {
+      // We need to get the task ID after it's created, so we'll schedule it after the tasks update
+      setTimeout(() => {
+        const newTask = tasks.find(t => t.name === task.name && t.reminderTime === task.reminderTime);
+        if (newTask) {
+          notificationService.scheduleTaskReminder(newTask);
+        }
+      }, 100);
+    }
+  };
 
   // Enhanced complete task function that updates streak and badges
   const completeTask = async (id: string) => {
@@ -96,7 +115,22 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         }
       }
     });
+
+    // Clear the reminder for completed task
+    notificationService.clearTaskReminder(id);
   };
+
+  // Schedule notifications when tasks change
+  useEffect(() => {
+    if (tasks.length > 0) {
+      notificationService.scheduleAllTaskReminders(tasks);
+    }
+
+    return () => {
+      // Clean up notifications when component unmounts
+      notificationService.clearAllReminders();
+    };
+  }, [tasks]);
 
   // Function to set onboarding as complete
   const setOnboardingComplete = (complete: boolean) => {

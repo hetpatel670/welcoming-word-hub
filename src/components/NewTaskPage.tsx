@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/context/AppContext';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import taskSuggestions from '@/data/taskSuggestions.json';
 
@@ -120,14 +120,15 @@ const NewTaskPage = ({ onBack }: NewTaskPageProps) => {
         </div>
 
         <div>
-          <label className="block text-gray-400 mb-2">Reminder</label>
+          <label className="block text-gray-400 mb-2">Reminder Time</label>
           <div className="relative">
             <Input
+              type="time"
               value={reminderTime}
               onChange={(e) => setReminderTime(e.target.value)}
-              placeholder="5:00 PM"
-              className="h-14 bg-app-lightblue border-none text-white rounded-lg"
+              className="h-14 bg-app-lightblue border-none text-white rounded-lg pr-12"
             />
+            <Clock size={20} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
         </div>
 
