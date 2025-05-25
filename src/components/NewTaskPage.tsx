@@ -35,7 +35,8 @@ const NewTaskPage = ({ onBack }: NewTaskPageProps) => {
         name,
         frequency: frequency as 'daily' | 'weekly' | 'mon-wed-fri' | 'every-3-hours',
         reminderTime,
-        isCompleted: false
+        isCompleted: false,
+        createdAt: new Date()
       });
       
       toast({
