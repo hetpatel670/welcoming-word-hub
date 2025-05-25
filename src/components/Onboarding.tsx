@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
@@ -54,9 +55,12 @@ const OnboardingStep = ({
   </motion.div>
 );
 
-const Onboarding = () => {
+interface OnboardingProps {
+  onComplete: () => void;
+}
+
+const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [step, setStep] = useState(0);
-  const { setOnboardingComplete } = useAppContext();
   
   const steps = [
     {
@@ -85,12 +89,12 @@ const Onboarding = () => {
     if (step < steps.length - 1) {
       setStep(step + 1);
     } else {
-      setOnboardingComplete(true);
+      onComplete();
     }
   };
   
   const handleSkip = () => {
-    setOnboardingComplete(true);
+    onComplete();
   };
   
   return (
