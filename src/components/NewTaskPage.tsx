@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,6 @@ const NewTaskPage = ({ onBack }: NewTaskPageProps) => {
   const [name, setName] = useState('');
   const [frequency, setFrequency] = useState('daily');
   const [reminderTime, setReminderTime] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   
   const { addTask } = useAppContext();
   const { toast } = useToast();
@@ -54,9 +54,7 @@ const NewTaskPage = ({ onBack }: NewTaskPageProps) => {
     }
   };
   
-  const handleSuggestTask = async () => {
-    setIsLoading(true);
-    
+  const handleSuggestTask = () => {
     try {
       // Use local JSON file for task suggestions
       const randomIndex = Math.floor(Math.random() * taskSuggestions.length);
@@ -73,18 +71,6 @@ const NewTaskPage = ({ onBack }: NewTaskPageProps) => {
         title: "Suggestion failed",
         description: "Failed to get task suggestion. Please try again.",
       });
-      
-      // Fallback to some predefined suggestions
-      const fallbackSuggestions = [
-        "Meditate for 5 minutes",
-        "Write in journal",
-        "Review goals for the day",
-        "Take a short walk",
-        "Do 10 pushups"
-      ];
-      setName(fallbackSuggestions[Math.floor(Math.random() * fallbackSuggestions.length)]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -150,9 +136,8 @@ const NewTaskPage = ({ onBack }: NewTaskPageProps) => {
           variant="secondary"
           className="h-14 mt-4 rounded-lg bg-indigo-600 text-white"
           onClick={handleSuggestTask}
-          disabled={isLoading}
         >
-          {isLoading ? "Suggesting..." : "Suggest Task"}
+          Suggest Task
         </Button>
 
         <div className="mt-auto">

@@ -65,6 +65,9 @@ const ProfilePage = () => {
     }
   };
 
+  // Filter to show only earned badges
+  const earnedBadges = badges.filter(badge => badge.earned);
+
   return (
     <div className="p-4 sm:p-6 flex flex-col h-full">
       <motion.div
@@ -148,27 +151,31 @@ const ProfilePage = () => {
       >
         <h3 className="text-lg font-bold text-white mb-4 flex items-center">
           <Award size={18} className="text-app-purple mr-2" />
-          Badges
+          Badges ({earnedBadges.length})
         </h3>
         
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          {badges.map((badge) => (
-            <motion.div
-              key={badge.id}
-              className={`p-3 rounded-lg flex flex-col items-center justify-center text-center ${
-                badge.earned ? 'bg-app-darkblue/70' : 'bg-app-darkblue/30'
-              }`}
-              whileHover={{ scale: 1.03 }}
-              transition={{ type: "spring", stiffness: 400, damping: 17 }}
-            >
-              <span className="text-2xl mb-1">{badge.icon}</span>
-              <h4 className={`text-sm font-medium ${badge.earned ? 'text-white' : 'text-gray-400'}`}>
-                {badge.name}
-              </h4>
-              <p className="text-xs text-gray-500 mt-1">{badge.description}</p>
-            </motion.div>
-          ))}
-        </div>
+        {earnedBadges.length > 0 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {earnedBadges.map((badge) => (
+              <motion.div
+                key={badge.id}
+                className="p-3 rounded-lg flex flex-col items-center justify-center text-center bg-app-darkblue/70"
+                whileHover={{ scale: 1.03 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
+              >
+                <span className="text-2xl mb-1">{badge.icon}</span>
+                <h4 className="text-sm font-medium text-white">{badge.name}</h4>
+                <p className="text-xs text-gray-300 mt-1">{badge.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-2">🏆</div>
+            <p className="text-gray-400">No badges earned yet</p>
+            <p className="text-gray-500 text-sm mt-1">Complete challenging tasks to earn special badges!</p>
+          </div>
+        )}
       </motion.div>
 
       <motion.div

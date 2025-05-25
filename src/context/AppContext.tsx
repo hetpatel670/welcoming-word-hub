@@ -6,6 +6,7 @@ import { useTasks } from '../hooks/useTasks';
 import { useStreak } from '../hooks/useStreak';
 import { useProfiles } from '../hooks/useProfiles';
 import { useBadges } from '../hooks/useBadges';
+import { useToast } from '@/hooks/use-toast';
 
 interface AppContextType {
   tasks: Task[];
@@ -52,30 +53,47 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const [activeTab, setActiveTab] = useState('home');
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [showUsernamePrompt, setShowUsernamePrompt] = useState(false);
+  const { toast } = useToast();
 
   // Custom hooks
   const { user, isLoggedIn, login, register, loginWithGoogle, logout, updateUsername, updateProfileVisibility } = useAuth();
   const { tasks, completedTasksPercentage, addTask, completeTask: baseCompleteTask, uncompleteTask, deleteTask, reorderTasks } = useTasks(user, isLoggedIn);
   const { currentStreak, checkAndUpdateStreak, setCurrentStreak } = useStreak(user, isLoggedIn);
-  const { badges, updateBadges } = useBadges();
+  const { badges, updateBadges, evaluateAndAwardSpecialBadge } = useBadges();
   const { fetchPublicProfiles } = useProfiles(user?.id);
 
   // Enhanced complete task function that updates streak and badges
   const completeTask = async (id: string) => {
-    await baseCompleteTask(id, (newPoints: number, oldStreak: number) => {
+    const task = tasks.find(t => t.id === id);
+    
+    await baseCompleteTask(id, async (newPoints: number, oldStreak: number) => {
       // Update user points in local state
-      if (user) {
+      if (user && task) {
         const updatedTasks = tasks.map(task => 
           task.id === id ? { ...task, isCompleted: true } : task
         );
         
         // Check and update streak
-        checkAndUpdateStreak(updatedTasks).then((newStreak) => {
-          if (newStreak) {
-            setCurrentStreak(newStreak);
-            updateBadges(newStreak);
-          }
+        const newStreak = await checkAndUpdateStreak(updatedTasks);
+        if (newStreak) {
+          setCurrentStreak(newStreak);
+          updateBadges(newStreak);
+        }
+        
+        // Evaluate for special badges using AI
+        const completedTasks = updatedTasks.filter(t => t.isCompleted).length;
+        const specialBadge = await evaluateAndAwardSpecialBadge(task.name, {
+          completedTasks,
+          currentStreak: newStreak || currentStreak,
+          points: newPoints
         });
+        
+        if (specialBadge) {
+          toast({
+            title: "🏆 New Badge Earned!",
+            description: `You've earned the "${specialBadge.name}" badge! ${specialBadge.description}`,
+          });
+        }
       }
     });
   };
