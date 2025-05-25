@@ -1,9 +1,11 @@
+
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { AppProvider } from './context/AppContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import React from 'react'
+import { registerSW } from './utils/pwa'
 
 // Add error handling for uncaught errors
 window.addEventListener('error', (event) => {
@@ -14,6 +16,9 @@ window.addEventListener('error', (event) => {
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason);
 });
+
+// Register service worker for PWA
+registerSW();
 
 // Disable React StrictMode in production to prevent double rendering
 const isProduction = import.meta.env.PROD;

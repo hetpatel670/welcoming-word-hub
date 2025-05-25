@@ -34,7 +34,6 @@ const ProfilePage = () => {
       toast({
         title: 'Error',
         description: 'Failed to update profile visibility',
-        variant: 'destructive'
       });
     }
   };
@@ -61,8 +60,7 @@ const ProfilePage = () => {
         }))
         .catch(() => toast({ 
           title: 'Failed to copy', 
-          description: 'Could not copy text to clipboard.',
-          variant: 'destructive'
+          description: 'Could not copy text to clipboard.'
         }));
     }
   };

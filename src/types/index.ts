@@ -2,10 +2,14 @@
 export interface Task {
   id: string;
   name: string;
+  title?: string;
+  description?: string;
   frequency: 'daily' | 'weekly' | 'mon-wed-fri' | 'every-3-hours';
   reminderTime?: string;
   isCompleted: boolean;
-  createdAt?: Date;
+  createdAt: Date;
+  category?: string;
+  priority?: 'low' | 'medium' | 'high';
 }
 
 export interface User {
@@ -17,6 +21,7 @@ export interface User {
   points: number;
   currentStreak: number;
   isPublicProfile?: boolean;
+  onboardingComplete?: boolean;
 }
 
 export interface Badge {
