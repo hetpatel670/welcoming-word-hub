@@ -20,23 +20,12 @@ window.addEventListener('unhandledrejection', (event) => {
 // Register service worker for PWA
 registerSW();
 
-// Disable React StrictMode in production to prevent double rendering
-const isProduction = import.meta.env.PROD;
-
 createRoot(document.getElementById("root")!).render(
-  isProduction ? (
+  <React.StrictMode>
     <ErrorBoundary>
       <AppProvider>
         <App />
       </AppProvider>
     </ErrorBoundary>
-  ) : (
-    <React.StrictMode>
-      <ErrorBoundary>
-        <AppProvider>
-          <App />
-        </AppProvider>
-      </ErrorBoundary>
-    </React.StrictMode>
-  )
+  </React.StrictMode>
 );

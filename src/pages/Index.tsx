@@ -1,6 +1,5 @@
 
 import React, { useEffect, useState } from 'react';
-import { AppProvider } from '@/context/AppContext';
 import Navigation from '@/components/Navigation';
 import { useAppContext } from '@/context/AppContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
@@ -16,13 +15,13 @@ import ExplorePage from '@/pages/ExplorePage';
 import UsernamePrompt from '@/components/UsernamePrompt';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-const AppContent = () => {
+const Index = () => {
   const { isLoggedIn, activeTab, setActiveTab, showOnboarding, showUsernamePrompt, setUsernamePromptComplete } = useAppContext();
   const [isLoading, setIsLoading] = useState(true);
   const [authInitialized, setAuthInitialized] = useState(false);
 
   // Add console log for debugging
-  console.log('AppContent rendering, isLoggedIn:', isLoggedIn, 'authInitialized:', authInitialized);
+  console.log('Index rendering, isLoggedIn:', isLoggedIn, 'authInitialized:', authInitialized);
 
   // Add a delay to ensure Firebase auth state is properly initialized
   useEffect(() => {
@@ -79,40 +78,19 @@ const AppContent = () => {
 
   console.log("Showing main app content");
   return (
-    <div className="min-h-screen bg-app-darkblue relative">
-      <div className="pb-16">
-        {activeTab === 'home' && <TaskList />}
-        {activeTab === 'add' && <NewTaskPage onBack={() => setActiveTab('home')} />}
-        {activeTab === 'explore' && <ExplorePage />}
-        {activeTab === 'dashboard' && <Dashboard />}
-        {activeTab === 'profile' && <ProfilePage />}
+    <ErrorBoundary>
+      <div className="min-h-screen bg-app-darkblue relative">
+        <div className="pb-16">
+          {activeTab === 'home' && <TaskList />}
+          {activeTab === 'add' && <NewTaskPage onBack={() => setActiveTab('home')} />}
+          {activeTab === 'explore' && <ExplorePage />}
+          {activeTab === 'dashboard' && <Dashboard />}
+          {activeTab === 'profile' && <ProfilePage />}
+        </div>
+        <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
       </div>
-      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
-    </div>
+    </ErrorBoundary>
   );
-};
-
-// Prevent double rendering by avoiding nested AppProvider
-const Index = () => {
-  // Check if we're already inside an AppProvider context
-  try {
-    useAppContext();
-    // If we get here, we're already inside an AppProvider
-    return (
-      <ErrorBoundary>
-        <AppContent />
-      </ErrorBoundary>
-    );
-  } catch (e) {
-    // If useAppContext throws, we need to provide the context
-    return (
-      <AppProvider>
-        <ErrorBoundary>
-          <AppContent />
-        </ErrorBoundary>
-      </AppProvider>
-    );
-  }
 };
 
 export default Index;
