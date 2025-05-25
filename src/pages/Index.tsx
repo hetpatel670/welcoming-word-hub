@@ -13,6 +13,7 @@ const Index = () => {
     showOnboarding, 
     showUsernamePrompt, 
     setOnboardingComplete,
+    setUsernamePromptComplete,
     completeTask
   } = useAppContext();
 
@@ -25,7 +26,7 @@ const Index = () => {
   }
 
   if (showUsernamePrompt) {
-    return <UsernamePrompt />;
+    return <UsernamePrompt onComplete={() => setUsernamePromptComplete(true)} />;
   }
 
   return (
