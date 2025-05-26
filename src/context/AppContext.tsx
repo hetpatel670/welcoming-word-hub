@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Task, User, Badge, UserProfile } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -53,17 +54,26 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const [activeTab, setActiveTab] = useState('home');
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [showUsernamePrompt, setShowUsernamePrompt] = useState(false);
+  const [totalCompletedTasks, setTotalCompletedTasks] = useState(0);
   const { toast } = useToast();
 
   // Custom hooks
   const { user, isLoggedIn, login, register, loginWithGoogle, logout, updateUsername, updateProfileVisibility } = useAuth();
   const { tasks, completedTasksPercentage, addTask: baseAddTask, completeTask: baseCompleteTask, uncompleteTask, deleteTask, reorderTasks } = useTasks(user, isLoggedIn);
   const { currentStreak, checkAndUpdateStreak, setCurrentStreak } = useStreak(user, isLoggedIn);
-  const { badges, updateBadges, evaluateAndAwardSpecialBadge } = useBadges();
+  const { badges, updateBadges } = useBadges();
   const { fetchPublicProfiles } = useProfiles(user?.id);
 
   // Initialize notification service
   const notificationService = NotificationService.getInstance();
+
+  // Track total completed tasks across all time
+  useEffect(() => {
+    if (user && user.points) {
+      // Assuming 10 points per completed task
+      setTotalCompletedTasks(Math.floor(user.points / 10));
+    }
+  }, [user]);
 
   // Enhanced add task function that schedules notifications
   const addTask = async (task: Omit<Task, 'id'>) => {
@@ -96,23 +106,22 @@ export const AppProvider = ({ children }: AppProviderProps) => {
         const newStreak = await checkAndUpdateStreak(updatedTasks);
         if (newStreak) {
           setCurrentStreak(newStreak);
-          updateBadges(newStreak);
         }
         
-        // Evaluate for special badges using AI
-        const completedTasks = updatedTasks.filter(t => t.isCompleted).length;
-        const specialBadge = await evaluateAndAwardSpecialBadge(task.name, {
-          completedTasks,
-          currentStreak: newStreak || currentStreak,
-          points: newPoints
-        });
+        // Update total completed tasks
+        const newTotalCompleted = totalCompletedTasks + 1;
+        setTotalCompletedTasks(newTotalCompleted);
         
-        if (specialBadge) {
+        // Update badges and check for newly earned ones
+        const newlyEarnedBadges = updateBadges(newStreak || currentStreak, newTotalCompleted);
+        
+        // Show notifications for newly earned badges
+        newlyEarnedBadges.forEach(badge => {
           toast({
             title: "🏆 New Badge Earned!",
-            description: `You've earned the "${specialBadge.name}" badge! ${specialBadge.description}`,
+            description: `You've earned the "${badge.name}" badge! ${badge.description}`,
           });
-        }
+        });
       }
     });
 

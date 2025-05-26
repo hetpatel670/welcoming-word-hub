@@ -1,71 +1,72 @@
 
 import { useState } from 'react';
 import { Badge } from '../types';
-import { evaluateTaskForBadge } from '../services/badgeEvaluationService';
 
 export const useBadges = () => {
   const [badges, setBadges] = useState<Badge[]>([
     { id: '1', name: 'First Steps', icon: '👟', description: 'Complete your first task', earned: false },
-    { id: '2', name: 'Streak Starter', icon: '🔥', description: 'Maintain a 3-day streak', earned: false },
-    { id: '3', name: 'Consistency King', icon: '👑', description: 'Complete all tasks for a full week', earned: false },
+    { id: '2', name: 'Getting Started', icon: '🌱', description: 'Complete 5 tasks', earned: false },
+    { id: '3', name: 'Task Master', icon: '🎯', description: 'Complete 10 tasks', earned: false },
+    { id: '4', name: 'Streak Starter', icon: '🔥', description: 'Maintain a 3-day streak', earned: false },
+    { id: '5', name: 'Week Warrior', icon: '💪', description: 'Maintain a 7-day streak', earned: false },
+    { id: '6', name: 'Consistency King', icon: '👑', description: 'Maintain a 14-day streak', earned: false },
+    { id: '7', name: 'Habit Hero', icon: '🦸', description: 'Complete 25 tasks', earned: false },
+    { id: '8', name: 'Task Champion', icon: '🏆', description: 'Complete 50 tasks', earned: false },
+    { id: '9', name: 'Dedication Master', icon: '🌟', description: 'Maintain a 30-day streak', earned: false },
+    { id: '10', name: 'Century Club', icon: '💯', description: 'Complete 100 tasks', earned: false },
   ]);
 
-  const updateBadges = (newStreak: number) => {
-    const updatedBadges = [...badges];
-    
-    // First Steps badge
-    if (newStreak >= 1 && !badges[0].earned) {
-      updatedBadges[0] = { ...updatedBadges[0], earned: true };
-    }
-    
-    // Streak Starter badge
-    if (newStreak >= 3 && !badges[1].earned) {
-      updatedBadges[1] = { ...updatedBadges[1], earned: true };
-    }
-    
-    // Consistency King badge
-    if (newStreak >= 7 && !badges[2].earned) {
-      updatedBadges[2] = { ...updatedBadges[2], earned: true };
-    }
+  const updateBadges = (newStreak: number, totalCompletedTasks: number = 0) => {
+    const updatedBadges = badges.map(badge => {
+      // Task completion badges
+      if (badge.id === '1' && totalCompletedTasks >= 1 && !badge.earned) {
+        return { ...badge, earned: true };
+      }
+      if (badge.id === '2' && totalCompletedTasks >= 5 && !badge.earned) {
+        return { ...badge, earned: true };
+      }
+      if (badge.id === '3' && totalCompletedTasks >= 10 && !badge.earned) {
+        return { ...badge, earned: true };
+      }
+      if (badge.id === '7' && totalCompletedTasks >= 25 && !badge.earned) {
+        return { ...badge, earned: true };
+      }
+      if (badge.id === '8' && totalCompletedTasks >= 50 && !badge.earned) {
+        return { ...badge, earned: true };
+      }
+      if (badge.id === '10' && totalCompletedTasks >= 100 && !badge.earned) {
+        return { ...badge, earned: true };
+      }
+
+      // Streak badges
+      if (badge.id === '4' && newStreak >= 3 && !badge.earned) {
+        return { ...badge, earned: true };
+      }
+      if (badge.id === '5' && newStreak >= 7 && !badge.earned) {
+        return { ...badge, earned: true };
+      }
+      if (badge.id === '6' && newStreak >= 14 && !badge.earned) {
+        return { ...badge, earned: true };
+      }
+      if (badge.id === '9' && newStreak >= 30 && !badge.earned) {
+        return { ...badge, earned: true };
+      }
+
+      return badge;
+    });
     
     setBadges(updatedBadges);
-  };
-
-  const evaluateAndAwardSpecialBadge = async (taskName: string, userStats: {
-    completedTasks: number;
-    currentStreak: number;
-    points: number;
-  }) => {
-    try {
-      const evaluation = await evaluateTaskForBadge(taskName, userStats);
-      
-      if (evaluation.shouldAwardBadge && evaluation.badgeData) {
-        // Check if badge already exists
-        const existingBadge = badges.find(badge => badge.name === evaluation.badgeData!.name);
-        
-        if (!existingBadge) {
-          const newBadge: Badge = {
-            id: `special-${Date.now()}`,
-            name: evaluation.badgeData.name,
-            icon: evaluation.badgeData.icon,
-            description: evaluation.badgeData.description,
-            earned: true
-          };
-          
-          setBadges(prev => [...prev, newBadge]);
-          return newBadge;
-        }
-      }
-    } catch (error) {
-      console.error('Error evaluating special badge:', error);
-    }
     
-    return null;
+    // Return newly earned badges for notifications
+    const newlyEarned = updatedBadges.filter((badge, index) => 
+      badge.earned && !badges[index].earned
+    );
+    
+    return newlyEarned;
   };
 
   return {
     badges,
-    updateBadges,
-    evaluateAndAwardSpecialBadge
+    updateBadges
   };
 };

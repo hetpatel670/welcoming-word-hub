@@ -71,6 +71,21 @@ const TaskAnalytics = ({ tasks, completedTasksPercentage, currentStreak }: TaskA
         </div>
       </div>
 
+      {/* Success Rate */}
+      <div className="bg-app-lightblue p-4 rounded-lg">
+        <h3 className="text-white font-semibold mb-4">Completion Rate</h3>
+        <div className="flex items-center justify-between">
+          <span className="text-gray-300">Success Rate</span>
+          <span className="text-app-teal font-bold text-lg">{completedTasksPercentage.toFixed(1)}%</span>
+        </div>
+        <div className="w-full bg-app-darkblue rounded-full h-2 mt-2">
+          <div 
+            className="bg-app-teal h-2 rounded-full transition-all duration-300" 
+            style={{ width: `${completedTasksPercentage}%` }}
+          ></div>
+        </div>
+      </div>
+
       {/* Charts */}
       {tasks.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
