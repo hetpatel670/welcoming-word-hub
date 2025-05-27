@@ -1,0 +1,113 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(username) {
+      return isAuthenticated() && request.auth.token.email != null;
+    }
+    
+    function isValidUser(userData) {
+      return userData.keys().hasAll(['email', 'username']) &&
+             userData.email is string &&
+             userData.username is string &&
+             userData.username.size() >= 3 &&
+             userData.username.matches('^[a-zA-Z0-9_]+$');
+    }
+    
+    function isValidTask(taskData) {
+      return taskData.keys().hasAll(['name', 'category', 'isCompleted']) &&
+             taskData.name is string &&
+             taskData.name.size() > 0 &&
+             taskData.category is string &&
+             taskData.isCompleted is bool;
+    }
+    
+    // Users collection rules
+    match /users/{username} {
+      // Allow read if:
+      // 1. User is authenticated and it's their own document, OR
+      // 2. The profile is public (for leaderboards/social features)
+      allow read: if isAuthenticated() && 
+                     (request.auth.token.email == resource.data.email || 
+                      resource.data.isPublicProfile == true);
+      
+      // Allow create if:
+      // 1. User is authenticated
+      // 2. The username matches the document ID
+      // 3. The email matches the authenticated user's email
+      // 4. Data structure is valid
+      allow create: if isAuthenticated() && 
+                       username == request.auth.token.email.split('@')[0] &&
+                       request.auth.token.email == resource.data.email &&
+                       isValidUser(resource.data);
+      
+      // Allow update if:
+      // 1. User is authenticated and owns the document
+      // 2. Email cannot be changed
+      // 3. Username cannot be changed
+      allow update: if isAuthenticated() && 
+                       request.auth.token.email == resource.data.email &&
+                       request.auth.token.email == prior(resource.data.email) &&
+                       resource.data.username == prior(resource.data.username);
+      
+      // Allow delete if user owns the document
+      allow delete: if isAuthenticated() && 
+                       request.auth.token.email == resource.data.email;
+      
+      // Tasks subcollection
+      match /tasks/{taskId} {
+        // Allow full access to tasks if user owns the parent user document
+        allow read, write: if isAuthenticated() && 
+                              request.auth.token.email == get(/databases/$(database)/documents/users/$(username)).data.email;
+        
+        // Validate task data on create/update
+        allow create, update: if isAuthenticated() && 
+                                 request.auth.token.email == get(/databases/$(database)/documents/users/$(username)).data.email &&
+                                 isValidTask(resource.data);
+      }
+      
+      // Streaks subcollection
+      match /streaks/{streakId} {
+        // Allow full access to streaks if user owns the parent user document
+        allow read, write: if isAuthenticated() && 
+                              request.auth.token.email == get(/databases/$(database)/documents/users/$(username)).data.email;
+        
+        // Validate streak data
+        allow create, update: if isAuthenticated() && 
+                                 request.auth.token.email == get(/databases/$(database)/documents/users/$(username)).data.email &&
+                                 resource.data.keys().hasAll(['currentStreak']) &&
+                                 resource.data.currentStreak is int &&
+                                 resource.data.currentStreak >= 0;
+      }
+      
+      // Badges subcollection (if you add badges later)
+      match /badges/{badgeId} {
+        allow read, write: if isAuthenticated() && 
+                              request.auth.token.email == get(/databases/$(database)/documents/users/$(username)).data.email;
+      }
+    }
+    
+    // Global leaderboard or public data (if needed)
+    match /leaderboard/{document=**} {
+      // Allow read for authenticated users
+      allow read: if isAuthenticated();
+      // Only allow system/admin writes (no user writes)
+      allow write: if false;
+    }
+    
+    // Analytics or system collections (read-only for users)
+    match /analytics/{document=**} {
+      allow read: if false; // No user access
+      allow write: if false; // Only server-side writes
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

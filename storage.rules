@@ -1,0 +1,50 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isValidImageFile() {
+      return request.resource.contentType.matches('image/.*') &&
+             request.resource.size < 5 * 1024 * 1024; // 5MB limit
+    }
+    
+    // User profile pictures
+    match /users/{userId}/profile/{fileName} {
+      // Allow read for authenticated users (for public profiles)
+      allow read: if isAuthenticated();
+      
+      // Allow write only for the owner and valid image files
+      allow write: if isOwner(userId) && isValidImageFile();
+      
+      // Allow delete only for the owner
+      allow delete: if isOwner(userId);
+    }
+    
+    // User task attachments (if you add this feature)
+    match /users/{userId}/tasks/{taskId}/{fileName} {
+      // Allow read/write only for the owner
+      allow read, write: if isOwner(userId) && isValidImageFile();
+      allow delete: if isOwner(userId);
+    }
+    
+    // Public assets (app icons, badges, etc.)
+    match /public/{allPaths=**} {
+      // Allow read for all authenticated users
+      allow read: if isAuthenticated();
+      // No write access for users
+      allow write: if false;
+    }
+    
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
