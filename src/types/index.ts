@@ -19,6 +19,7 @@ export interface User {
   displayName?: string;
   photoURL?: string;
   points: number;
+  level?: number;
   currentStreak: number;
   isPublicProfile?: boolean;
   onboardingComplete?: boolean;

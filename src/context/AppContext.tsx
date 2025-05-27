@@ -59,7 +59,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const { user, isLoggedIn, login, register, logout, updateUsername, updateProfileVisibility } = useAuth();
   const { tasks, completedTasksPercentage, addTask: baseAddTask, completeTask: baseCompleteTask, uncompleteTask, deleteTask, reorderTasks } = useTasks(user, isLoggedIn);
   const { currentStreak, checkAndUpdateStreak, setCurrentStreak } = useStreak(user, isLoggedIn);
-  const { badges, updateBadges, evaluateAndAwardBadge } = useBadges();
+  const { badges, updateBadges, evaluateAndAwardSpecialBadge } = useBadges();
   const { fetchPublicProfiles } = useProfiles(user?.username);
 
   console.log('AppContext - Current state:', { user, isLoggedIn, tasks: tasks.length });
@@ -105,7 +105,7 @@ export const AppProvider = ({ children }: AppProviderProps) => {
             updateBadges(newStreak);
             
             // Award badge for completing task
-            const badge = evaluateAndAwardBadge(task.name, {
+            const badge = await evaluateAndAwardSpecialBadge(task.name, {
               completedTasks: updatedTasks.filter(t => t.isCompleted).length,
               currentStreak: newStreak,
               points: newPoints
