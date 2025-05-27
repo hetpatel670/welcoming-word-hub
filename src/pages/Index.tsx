@@ -1,40 +1,54 @@
 
-import { useState, useEffect } from "react";
-import MainApp from "@/components/MainApp";
-import LoginPage from "@/components/LoginPage";
-import Onboarding from "@/components/Onboarding";
-import UsernamePrompt from "@/components/UsernamePrompt";
-import TaskReminderNotification from "@/components/TaskReminderNotification";
-import { useAppContext } from "@/context/AppContext";
+import React, { useEffect } from 'react';
+import { useAppContext } from '@/context/AppContext';
+import LoginPage from '@/components/LoginPage';
+import MainApp from '@/components/MainApp';
+import Onboarding from '@/components/Onboarding';
+import UsernamePrompt from '@/components/UsernamePrompt';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 const Index = () => {
   const { 
+    user, 
     isLoggedIn, 
     showOnboarding, 
     showUsernamePrompt, 
-    setOnboardingComplete,
-    setUsernamePromptComplete,
-    completeTask
+    setOnboardingComplete, 
+    setUsernamePromptComplete 
   } = useAppContext();
 
+  console.log('Index - Auth state:', { user, isLoggedIn, showOnboarding, showUsernamePrompt });
+
+  // Show loading while Firebase is initializing
+  if (user === undefined || isLoggedIn === undefined) {
+    return <LoadingSpinner />;
+  }
+
+  // If not logged in, show login page
   if (!isLoggedIn) {
     return <LoginPage />;
   }
 
-  if (showOnboarding) {
-    return <Onboarding onComplete={() => setOnboardingComplete(true)} />;
+  // If logged in but no username, show username prompt
+  if (isLoggedIn && user && !user.username && showUsernamePrompt) {
+    return (
+      <UsernamePrompt 
+        onComplete={() => setUsernamePromptComplete(true)}
+      />
+    );
   }
 
-  if (showUsernamePrompt) {
-    return <UsernamePrompt onComplete={() => setUsernamePromptComplete(true)} />;
+  // If first time user, show onboarding
+  if (showOnboarding && !user?.onboardingComplete) {
+    return (
+      <Onboarding 
+        onComplete={() => setOnboardingComplete(true)}
+      />
+    );
   }
 
-  return (
-    <>
-      <MainApp />
-      <TaskReminderNotification onMarkComplete={completeTask} />
-    </>
-  );
+  // Show main app
+  return <MainApp />;
 };
 
 export default Index;

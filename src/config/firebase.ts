@@ -1,21 +1,21 @@
 
 import { FirebaseApp, initializeApp } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
-import { Firestore, getFirestore } from 'firebase/firestore';
+import { Firestore, getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { Analytics, getAnalytics } from 'firebase/analytics';
 
-// Firebase configuration - using environment variables for security
+// Firebase configuration
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: "AIzaSyAhV6m8RZSu3erC_zKYOMyrfSyDmyxmLTw",
+  authDomain: "dotogether-c0b18.firebaseapp.com",
+  projectId: "dotogether-c0b18",
+  storageBucket: "dotogether-c0b18.firebasestorage.app",
+  messagingSenderId: "52364021580",
+  appId: "1:52364021580:web:2dfb4a01dcab82862e09e9",
+  measurementId: "G-0L7W6M722D"
 };
 
-// Lazy initialize Firebase
+// Initialize Firebase
 let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
@@ -65,7 +65,7 @@ const getFirebaseFirestore = (): Firestore => {
 };
 
 const getFirebaseAnalytics = (): Analytics => {
-  if (!analytics) {
+  if (!analytics && typeof window !== 'undefined') {
     console.log("Initializing Firebase analytics");
     try {
       analytics = getAnalytics(getFirebaseApp());

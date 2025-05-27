@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { Task, User, Badge, UserProfile } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -6,14 +7,13 @@ import { useStreak } from '../hooks/useStreak';
 import { useProfiles } from '../hooks/useProfiles';
 import { useBadges } from '../hooks/useBadges';
 import { useToast } from '@/hooks/use-toast';
-import NotificationService from '../services/notificationService';
 import { analyticsService } from '../services/analyticsService';
 
 interface AppContextType {
   tasks: Task[];
-  user: User | null;
+  user: User | null | undefined;
   badges: Badge[];
-  isLoggedIn: boolean;
+  isLoggedIn: boolean | undefined;
   currentStreak: number;
   completedTasksPercentage: number;
   activeTab: string;
@@ -59,92 +59,80 @@ export const AppProvider = ({ children }: AppProviderProps) => {
   const { user, isLoggedIn, login, register, logout, updateUsername, updateProfileVisibility } = useAuth();
   const { tasks, completedTasksPercentage, addTask: baseAddTask, completeTask: baseCompleteTask, uncompleteTask, deleteTask, reorderTasks } = useTasks(user, isLoggedIn);
   const { currentStreak, checkAndUpdateStreak, setCurrentStreak } = useStreak(user, isLoggedIn);
-  const { badges, updateBadges, evaluateAndAwardSpecialBadge } = useBadges();
+  const { badges, updateBadges, evaluateAndAwardBadge } = useBadges();
   const { fetchPublicProfiles } = useProfiles(user?.username);
 
-  // Initialize notification service
-  const notificationService = NotificationService.getInstance();
+  console.log('AppContext - Current state:', { user, isLoggedIn, tasks: tasks.length });
 
-  // Enhanced add task function that schedules notifications
+  // Enhanced add task function
   const addTask = async (task: Omit<Task, 'id'>) => {
-    await baseAddTask(task);
-    
-    // Track task creation
-    analyticsService.trackTaskCreated(task.category);
-    
-    // Schedule notification if reminder time is set
-    if (task.reminderTime) {
-      // We need to get the task ID after it's created, so we'll schedule it after the tasks update
-      setTimeout(() => {
-        const newTask = tasks.find(t => t.name === task.name && t.reminderTime === task.reminderTime);
-        if (newTask) {
-          notificationService.scheduleTaskReminder(newTask);
-        }
-      }, 100);
+    try {
+      await baseAddTask(task);
+      
+      // Track task creation
+      if (typeof analyticsService?.trackTaskCreated === 'function') {
+        analyticsService.trackTaskCreated(task.category || 'general');
+      }
+      
+      toast({
+        title: "Task added successfully",
+        description: `"${task.name}" has been added to your tasks`,
+      });
+    } catch (error) {
+      console.error('Error adding task:', error);
+      toast({
+        title: "Error adding task",
+        description: "Failed to add task. Please try again.",
+      });
     }
   };
 
-  // Enhanced complete task function that updates streak and badges
+  // Enhanced complete task function
   const completeTask = async (id: string) => {
     const task = tasks.find(t => t.id === id);
     
-    await baseCompleteTask(id, async (newPoints: number, oldStreak: number) => {
-      // Update user points in local state
-      if (user && task) {
-        const updatedTasks = tasks.map(task => 
-          task.id === id ? { ...task, isCompleted: true } : task
-        );
-        
-        // Check and update streak
-        const newStreak = await checkAndUpdateStreak(updatedTasks);
-        if (newStreak) {
-          setCurrentStreak(newStreak);
-          updateBadges(newStreak);
+    try {
+      await baseCompleteTask(id, async (newPoints: number, oldStreak: number) => {
+        if (user && task) {
+          const updatedTasks = tasks.map(task => 
+            task.id === id ? { ...task, isCompleted: true } : task
+          );
           
-          // Track streak milestones
-          if (newStreak > oldStreak && (newStreak % 5 === 0 || newStreak % 10 === 0)) {
-            analyticsService.trackStreakMilestone(newStreak);
+          // Check and update streak
+          const newStreak = await checkAndUpdateStreak(updatedTasks);
+          if (newStreak) {
+            setCurrentStreak(newStreak);
+            updateBadges(newStreak);
+            
+            // Award badge for completing task
+            const badge = evaluateAndAwardBadge(task.name, {
+              completedTasks: updatedTasks.filter(t => t.isCompleted).length,
+              currentStreak: newStreak,
+              points: newPoints
+            });
+            
+            if (badge) {
+              toast({
+                title: "🏆 New Badge Earned!",
+                description: `You've earned the "${badge.name}" badge!`,
+              });
+            }
           }
         }
-        
-        // Evaluate for special badges using AI
-        const completedTasks = updatedTasks.filter(t => t.isCompleted).length;
-        const specialBadge = await evaluateAndAwardSpecialBadge(task.name, {
-          completedTasks,
-          currentStreak: newStreak || currentStreak,
-          points: newPoints
-        });
-        
-        if (specialBadge) {
-          // Track badge earned
-          analyticsService.trackBadgeEarned(specialBadge.name, specialBadge.type || 'special');
-          
-          toast({
-            title: "🏆 New Badge Earned!",
-            description: `You've earned the "${specialBadge.name}" badge! ${specialBadge.description}`,
-          });
-        }
-        
-        // Track task completion
-        analyticsService.trackTaskCompleted(task.category, task.points);
-      }
-    });
+      });
 
-    // Clear the reminder for completed task
-    notificationService.clearTaskReminder(id);
-  };
-
-  // Schedule notifications when tasks change
-  useEffect(() => {
-    if (tasks.length > 0) {
-      notificationService.scheduleAllTaskReminders(tasks);
+      toast({
+        title: "Task completed!",
+        description: task ? `Great job completing "${task.name}"!` : "Task completed successfully!",
+      });
+    } catch (error) {
+      console.error('Error completing task:', error);
+      toast({
+        title: "Error completing task",
+        description: "Failed to complete task. Please try again.",
+      });
     }
-
-    return () => {
-      // Clean up notifications when component unmounts
-      notificationService.clearAllReminders();
-    };
-  }, [tasks]);
+  };
 
   // Function to set onboarding as complete
   const setOnboardingComplete = (complete: boolean) => {
@@ -152,7 +140,9 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     
     if (complete) {
       localStorage.setItem('onboardingComplete', 'true');
-      analyticsService.trackOnboardingCompleted();
+      if (typeof analyticsService?.trackOnboardingCompleted === 'function') {
+        analyticsService.trackOnboardingCompleted();
+      }
     }
   };
 
@@ -164,19 +154,19 @@ export const AppProvider = ({ children }: AppProviderProps) => {
     }
   }, []);
 
-  // Add function to set username prompt complete
+  // Function to set username prompt complete
   const setUsernamePromptComplete = (complete: boolean) => {
     setShowUsernamePrompt(!complete);
   };
 
-  // Add effect to check if username is set
+  // Check if username is set
   useEffect(() => {
-    if (user && isLoggedIn && !user.username && !usernamePromptComplete) {
+    if (user && isLoggedIn && !user.username) {
       setShowUsernamePrompt(true);
-    } else if (user && user.username && usernamePromptComplete) {
+    } else if (user && user.username) {
       setShowUsernamePrompt(false);
     }
-  }, [user, isLoggedIn, usernamePromptComplete]);
+  }, [user, isLoggedIn]);
 
   return (
     <AppContext.Provider value={{
