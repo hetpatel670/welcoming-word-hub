@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   signInWithEmailAndPassword, 
@@ -74,7 +73,8 @@ export const useAuth = () => {
                   points: 0,
                   currentStreak: 0,
                   username: '',
-                  isPublicProfile: false
+                  isPublicProfile: false,
+                  level: 1
                 };
                 setUser(userObj);
                 setIsLoggedIn(true);
@@ -98,7 +98,8 @@ export const useAuth = () => {
                 points: 0,
                 currentStreak: 0,
                 username: '',
-                isPublicProfile: false
+                isPublicProfile: false,
+                level: 1
               };
               setUser(userObj);
               setIsLoggedIn(true);
@@ -141,7 +142,8 @@ export const useAuth = () => {
           currentStreak: userDoc.data().currentStreak || 0,
           isPublicProfile: userDoc.data().isPublicProfile || false,
           displayName: userDoc.data().displayName || '',
-          photoURL: userDoc.data().photoURL || ''
+          photoURL: userDoc.data().photoURL || '',
+          level: userDoc.data().level || 1
         };
       }
       
@@ -182,8 +184,6 @@ export const useAuth = () => {
     }
   };
 
-
-
   const logout = async () => {
     try {
       const auth = getFirebaseAuth();
@@ -201,17 +201,13 @@ export const useAuth = () => {
     if (!auth.currentUser) throw new Error('User not authenticated');
     
     try {
-      // Check if username is available
-      const isAvailable = await firestoreService.isUsernameAvailable(username);
-      if (!isAvailable) {
-        throw new Error('Username is already taken');
-      }
-
+      console.log('Attempting to set username:', username);
+      
       // Check if user already has a username-based document
       const existingUser = await fetchUserDataByEmail(auth.currentUser.email || '');
       
-      if (existingUser && existingUser.username) {
-        // User already has a username, just update it
+      if (existingUser && existingUser.username && existingUser.username !== username) {
+        // User already has a different username, just update it
         await firestoreService.updateUser(existingUser.username, { username });
         setUser(prev => prev ? { ...prev, username, id: username } : null);
       } else {
@@ -222,10 +218,14 @@ export const useAuth = () => {
           photoURL: auth.currentUser.photoURL || '',
           points: user?.points || 0,
           currentStreak: user?.currentStreak || 0,
-          isPublicProfile: user?.isPublicProfile || false
+          isPublicProfile: user?.isPublicProfile || false,
+          level: user?.level || 1
         };
 
+        console.log('Creating new user with username:', username);
         await firestoreService.createUser(username, userData);
+        
+        console.log('User created successfully, updating state');
         setUser(prev => prev ? { ...prev, username, id: username } : null);
         
         // Track username set and update analytics
@@ -235,9 +235,17 @@ export const useAuth = () => {
           has_username: true
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating username:', error);
-      throw error;
+      
+      // Provide more specific error messages
+      if (error.message?.includes('already taken')) {
+        throw new Error('This username is already taken. Please choose a different one.');
+      } else if (error.message?.includes('Permission denied')) {
+        throw new Error('Permission denied. Please check your account setup or try logging out and back in.');
+      } else {
+        throw new Error(error.message || 'Failed to set username. Please try again.');
+      }
     }
   };
 
