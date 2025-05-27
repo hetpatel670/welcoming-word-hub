@@ -16,26 +16,16 @@ import { Task, User } from '../types';
 export class FirestoreService {
   private db = getFirebaseFirestore();
 
-  // Check if username is available by attempting to create the document
+  // Check if username is available
   async isUsernameAvailable(username: string): Promise<boolean> {
     try {
-      // Instead of reading, we'll try to create with a test write
-      // This avoids permission issues with reading other users' documents
       const userDocRef = doc(this.db, 'users', username);
-      
-      // Try to get the document first
-      try {
-        const userDoc = await getDoc(userDocRef);
-        return !userDoc.exists();
-      } catch (permissionError) {
-        // If we can't read due to security rules, we'll assume it's available
-        // The actual check will happen during creation
-        console.log('Permission denied reading user doc, proceeding with creation attempt');
-        return true;
-      }
+      const userDoc = await getDoc(userDocRef);
+      return !userDoc.exists();
     } catch (error) {
       console.error('Error checking username availability:', error);
-      // Return true to allow the attempt, let the creation fail if username exists
+      // If we can't check due to permissions, assume it's available
+      // The actual check will happen during creation
       return true;
     }
   }
@@ -45,17 +35,6 @@ export class FirestoreService {
     try {
       const userDocRef = doc(this.db, 'users', username);
       
-      // First check if user already exists by trying to read
-      try {
-        const existingDoc = await getDoc(userDocRef);
-        if (existingDoc.exists()) {
-          throw new Error('Username is already taken');
-        }
-      } catch (readError) {
-        // If we can't read, proceed with creation attempt
-        console.log('Could not verify existing user, proceeding with creation');
-      }
-
       await setDoc(userDocRef, {
         ...userData,
         id: username,
@@ -74,7 +53,7 @@ export class FirestoreService {
       // Check if it's a permission denied error or document already exists
       if (error.code === 'permission-denied') {
         throw new Error('Permission denied. Please check your account setup.');
-      } else if (error.code === 'already-exists' || error.message?.includes('already taken')) {
+      } else if (error.code === 'already-exists') {
         throw new Error('Username is already taken');
       } else {
         throw new Error('Failed to create user account. Please try again.');

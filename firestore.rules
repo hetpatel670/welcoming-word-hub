@@ -1,13 +1,10 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Helper functions
     function isAuthenticated() {
       return request.auth != null;
-    }
-    
-    function isOwner(username) {
-      return isAuthenticated() && request.auth.token.email != null;
     }
     
     function isValidUser(userData) {
@@ -29,20 +26,22 @@ service cloud.firestore {
     // Users collection rules
     match /users/{username} {
       // Allow read if:
-      // 1. User is authenticated and it's their own document, OR
-      // 2. The profile is public (for leaderboards/social features)
+      // 1. User is authenticated and it's their own document (email matches), OR
+      // 2. The profile is public (for leaderboards/social features), OR
+      // 3. User is authenticated (for username availability checking)
       allow read: if isAuthenticated() && 
                      (request.auth.token.email == resource.data.email || 
-                      resource.data.isPublicProfile == true);
+                      resource.data.get('isPublicProfile', false) == true ||
+                      !exists(/databases/$(database)/documents/users/$(username)));
       
       // Allow create if:
       // 1. User is authenticated
-      // 2. The username matches the document ID
-      // 3. The email matches the authenticated user's email
-      // 4. Data structure is valid
+      // 2. The email matches the authenticated user's email
+      // 3. Data structure is valid
+      // 4. Username matches the document ID
       allow create: if isAuthenticated() && 
-                       username == request.auth.token.email.split('@')[0] &&
                        request.auth.token.email == resource.data.email &&
+                       username == resource.data.username &&
                        isValidUser(resource.data);
       
       // Allow update if:
